@@ -5,6 +5,34 @@
 #include "DHTesp.h"
 DHTesp dht;
 
+
+String encryptionType(int type) {
+  switch (type) {
+    case 1:
+      return "WEP";
+    break;
+    case 2:
+      return "WPA/PSK";
+    break;
+    case 4:
+      return "WPA2/PSK";
+    break;
+    case 7:
+      return "<<OPEN>>";
+    break;
+    case 8:
+      return "WPA/WPA2/PSK";
+    break;
+    default: {
+      String out = "Type not found: ";
+      out += type;
+      return out;
+    }
+    break;
+  }
+}
+
+
 String getValue(String data, char separator, int index) {
     int found = 0;
     int strIndex[] = { 0, -1 };
@@ -34,8 +62,12 @@ void System::pushDHTDate(float temp, float humi){
 DTH_Struct System::showDHTValue() {
   float humidity = dht.getHumidity();
   float temperature = dht.getTemperature();
+  if(isnan(temperature) || isnan(humidity)) {
+    delay(100);
+    return showDHTValue();
+  }
   float heatIndex = dht.computeHeatIndex(temperature, humidity, false);
-
+  insertDHTLog(temperature, humidity);
   return { temperature, temperature, heatIndex };
 };
 String System::showDHTHistory(int start, int qtd){
@@ -65,7 +97,29 @@ SYS_Status_Struct System::status_chip(){
   return { realSize, ideSize, ideMode, chipId, chipSpeed, ideModeName, configStatus, sketchSize, sketchSizeFree, heapFragmentation };
 };
 String System::list_wifi(bool write_data){
-  return "";
+  int count_wifi = WiFi.scanNetworks();
+  int networkItem = -1;
+  String json = "[";
+
+  while (networkItem++ < count_wifi) {
+    json += "{\"name\":\"";
+    json += WiFi.SSID(networkItem);
+    json += "\",\"encrypt\":\"";
+    json += encryptionType(WiFi.encryptionType(networkItem));
+    json += "\",\"rssi\":";
+    json += WiFi.RSSI(networkItem);
+    json += "dBm\",\"mac\":";
+    json += WiFi.BSSIDstr(networkItem);
+    json += "\",\"chanel\":";
+    json += WiFi.channel(networkItem);
+    json += "\",\"visibility\":";
+    json += WiFi.isHidden(networkItem) ? "<<Hidden>>" : "visible";
+    json += networkItem == count_wifi ? "\"}" : "\"},";
+  }
+
+  json += "]";
+
+  return json;
 };
 void System::startConfig(){
   String config_raw = readFile("config");
