@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include "data_base.h"
+#define PIN_DHT D2
 
 struct DTH_Struct {
   float temperature;
@@ -31,13 +33,13 @@ struct SYS_Status_Struct {
 String getValue(String data, char separator, int index);
 String wifiStringState(int code);
 
-DTH_Struct DHTData();
-SYS_Struct SYSData();
 
-class System {
+class System:public DataBaseSD {
    public:
+    System(int pin=PIN_DHT);
     void pushDHTDate(float temp, float humi);
-    String showDHTDate(int start = 0, int qtd = 0);
+    String showDHTHistory(int start = 0, int qtd = 0);
+    DTH_Struct showDHTValue();
     String showInfo();
     String showLogConfig();
     void writeFile(String path, String text);

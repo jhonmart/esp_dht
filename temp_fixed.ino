@@ -21,7 +21,7 @@ void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
   case WStype_TEXT:
     if (memcmp(payload, "temp_humi", 9) == 0) {
       String json = "{\"temperature\": ";
-      DTH_Struct state = DHTData();
+      DTH_Struct state = sys.showDHTValue();
       float humidity = state.humidity;
       float temperature = state.temperature;
       float heatIndex = state.heatIndex;
@@ -43,7 +43,7 @@ void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
         String json = sys.showDHTDate(start, qtd);
         _socket.sendTXT(num, json);
       } else {
-        String json = sys.showDHTDate();
+        String json = sys.showDHTHistory();
         _socket.sendTXT(num, json);
       }
     } else if (memcmp(payload, "card_info", 9) == 0) { 
