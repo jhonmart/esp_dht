@@ -51,17 +51,18 @@ void System::writeFile(String path, String text){
   writeFile(path, text);
 };
 SYS_Status_Struct System::status_chip(){
-  return {};
-  // uint32_t realSize;
-  // uint32_t ideSize;
-  // FlashMode_t ideMode;
-  // uint32_t chipId;
-  // uint32_t chipSpeed;
-  // String ideModeName;
-  // String configStatus;
-  // uint32_t sketchSize;
-  // uint32_t sketchSizeFree;
-  // String heapFragmentation;
+  uint32_t realSize = ESP.getFlashChipRealSize();
+  uint32_t ideSize = ESP.getFlashChipSize();
+  FlashMode_t ideMode = ESP.getFlashChipMode();
+  uint32_t chipId = ESP.getFlashChipSpeed();
+  uint32_t chipSpeed = ESP.getCpuFreqMHz();
+  String ideModeName = "";
+  String configStatus = ideSize == realSize ? "ok" : "wrong";
+  uint32_t sketchSize = ESP.getSketchSize();
+  uint32_t sketchSizeFree = ESP.getFreeSketchSpace();
+  String heapFragmentation = (String)ESP.getHeapFragmentation();
+  
+  return { realSize, ideSize, ideMode, chipId, chipSpeed, ideModeName, configStatus, sketchSize, sketchSizeFree, heapFragmentation };
 };
 String System::list_wifi(bool write_data){
   return "";
