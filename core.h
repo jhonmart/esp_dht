@@ -26,7 +26,6 @@ struct SYS_Status_Struct {
 };
 
 String getValue(String data, char separator, int index);
-String wifiStringState(int code);
 
 
 class System:public DataBaseSD {
@@ -34,11 +33,9 @@ class System:public DataBaseSD {
     System(int pin=PIN_DHT);
     SYS_Status_Struct status_chip();
     String showDHTHistory(int start = 0, int qtd = 0);
-    String list_wifi(bool write_data = false);
-    String readFile(String path);
+    String list_wifi();
     String showLogConfig();
     String showDHTValue();
-    String showInfo();
     String showDir();
     void logWS(int client, String status, String info);
     void startConfig();

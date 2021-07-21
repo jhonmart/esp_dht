@@ -1,8 +1,6 @@
 #include <WebSocketsServer.h>
 #include "core.h"
 
-WiFiServer server(80);
-
 System sys;
 
 int SOCKET_PORT  = 8080;
@@ -10,12 +8,16 @@ int SOCKET_PORT  = 8080;
 WebSocketsServer _socket = WebSocketsServer(SOCKET_PORT);
 
 void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+  String ip;
   switch (type) {
-  case WStype_DISCONNECTED:
-    sys.logWS(num, "disconnected", "");
-    break;
+  case WStype_DISCONNECTED: {
+    ip = _socket.remoteIP(num).toString();
+    sys.logWS(num, "disconnected", ip);
+  }
+  break;
   case WStype_CONNECTED: {
-    sys.logWS(num, "connected", "");
+    ip = _socket.remoteIP(num).toString();
+    sys.logWS(num, "connected", ip);
     _socket.sendTXT(num, "Connected: ok?");
   }
   break;
@@ -31,7 +33,7 @@ void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
         String json = sys.showDHTDate(start, qtd);
         _socket.sendTXT(num, json);
       } else {
-        String json = sys.showDHTHistory();
+        String json = sys.showDHTDate();
         _socket.sendTXT(num, json);
       }
     } else if (memcmp(payload, "card_info", 9) == 0) { 
@@ -55,7 +57,8 @@ void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
       _socket.broadcastTXT(payload);
     break;
   case WStype_BIN: {
-      sys.logWS(num, "trying upload", (String)length);
+      sys.logWS(num, "start upload", ip);
+      sys.logWS(num, "upload size", (String)length);
       hexdump(payload, length);
     }
     break;
@@ -68,8 +71,6 @@ void setup() {
   ESP.wdtEnable(5000); 
 
   sys.status_chip();
-  
-  server.begin();
 
   _socket.begin();
   _socket.onEvent(socketEvent);

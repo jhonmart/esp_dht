@@ -48,8 +48,6 @@ String getValue(String data, char separator, int index) {
     return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-String wifiStringState(int code);
-
 System::System(int pin) {
   dht.setup(pin, DHTesp::DHT22);
 }
@@ -73,12 +71,6 @@ String System::showDHTValue() {
   insertDHTLog(temperature, humidity);
   return json;
 };
-String System::showDHTHistory(int start, int qtd){
-  return showDHTDate(start, qtd);
-};
-String System::showInfo(){
-  return showInfo();
-};
 String System::showLogConfig(){
   return readFile("config");
 };
@@ -94,9 +86,10 @@ SYS_Status_Struct System::status_chip(){
   uint32_t sketchSizeFree = ESP.getFreeSketchSpace();
   String heapFragmentation = (String)ESP.getHeapFragmentation();
   
-  return { realSize, ideSize, ideMode, chipId, chipSpeed, ideModeName, configStatus, sketchSize, sketchSizeFree, heapFragmentation };
+  SYS_Status_Struct out = { realSize, ideSize, ideMode, chipId, chipSpeed, ideModeName, configStatus, sketchSize, sketchSizeFree, heapFragmentation };
+  return out;
 };
-String System::list_wifi(bool write_data){
+String System::list_wifi(){
   int count_wifi = WiFi.scanNetworks();
   int networkItem = -1;
   String json = "[";
@@ -153,9 +146,6 @@ void System::startConfig(){
   } else {
     writeFile("SYSTEN_LOG", "{\"fail\":\"OnReadFile\"}");
   }
-};
-String System::readFile(String path){
-  return readFile(path);
 };
 String System::showDir(){
   return readRoot();
