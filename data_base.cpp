@@ -84,13 +84,15 @@ void DataBaseSD::insertDHTLog(float temp, float humi) {
 }
 
 String DataBaseSD::showDHTDate(int start, int qtd) {
+  int sizeItem = 13;
+  int lines = 100;
   File fileRead = SD.open("history_dth");
   String outData = "{\"data\": [";
   if (fileRead) {
     int row = 0;
     unsigned long filesize = fileRead.size();
-    qtd >= 0 ? fileRead.seek(start * 13) : fileRead.seek(filesize - 13e2);
-    unsigned long limit = (qtd >= 0 ? 13 * qtd : 13e2) + qtd -1;
+    qtd >= 0 ? fileRead.seek(start * sizeItem) : fileRead.seek(filesize - sizeItem * lines);
+    unsigned long limit = (qtd >= 0 ? sizeItem * qtd : sizeItem * lines) + qtd -1;
     while (fileRead.available() && (row++ < limit || !outData.endsWith("]"))) {
       char character = (char) fileRead.read();
       if(character == '[' || outData.indexOf("[[") > 1) {
@@ -99,16 +101,10 @@ String DataBaseSD::showDHTDate(int start, int qtd) {
           outData += ",";
       }
     }
-    if(outData.indexOf("nan") >= 0) {
-      outData.replace("nan", "");
-      outData.replace("[,]", "");
-      outData.replace("[]", "");
-      outData.replace(",,", ",");
-    }
     outData += "], \"size\": ";
     outData += filesize;
     outData += ", \"rows\": ";
-    outData += (filesize / 13);
+    outData += (filesize / sizeItem);
     outData += "}";
     fileRead.close();
   } else {

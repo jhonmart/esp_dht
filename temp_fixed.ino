@@ -12,32 +12,20 @@ WebSocketsServer _socket = WebSocketsServer(SOCKET_PORT);
 void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
   switch (type) {
   case WStype_DISCONNECTED:
-    //USE_SERIAL.printf("[%u] Disconnected!\n", num);
+    sys.logWS(num, "disconnected", "");
     break;
   case WStype_CONNECTED: {
+    sys.logWS(num, "connected", "");
     _socket.sendTXT(num, "Connected: ok?");
   }
   break;
   case WStype_TEXT:
     if (memcmp(payload, "temp_humi", 9) == 0) {
-      String json = "{\"temperature\": ";
-      DTH_Struct state = sys.showDHTValue();
-      float humidity = state.humidity;
-      float temperature = state.temperature;
-      float heatIndex = state.heatIndex;
-
-      json += temperature;
-      json += ", \"humidity\": ";
-      json += humidity;
-      json += ", \"heat_index\": ";
-      json += heatIndex;
-      json += ", \"valid\": true}";
-
+      String json = sys.showDHTValue();
       _socket.sendTXT(num, json);
-      sys.pushDHTDate(temperature, humidity);
     } else if (memcmp(payload, "temp_card", 9) == 0) {
       if(memcmp(payload, "temp_card:", 10) == 0) {
-        String str = String(((char *) payload)); // Convertion char* to String
+        String str = String(((char *) payload));
         int start = getValue(str,':', 1).toInt();
         int qtd = getValue(str,':', 2).toInt();
         String json = sys.showDHTDate(start, qtd);
@@ -59,15 +47,17 @@ void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
       String json = sys.list_wifi();
       _socket.sendTXT(num, json);
     } else if (memcmp(payload, "read_file", 9) == 0) { 
-      String str = String(((char *) payload)); // Convertion char* to String
+      String str = String(((char *) payload));
       String path = getValue(str,':', 1);
       String json = sys.readFile(path);
       _socket.sendTXT(num, json);
     } else 
       _socket.broadcastTXT(payload);
     break;
-  case WStype_BIN:
-    hexdump(payload, length);
+  case WStype_BIN: {
+      sys.logWS(num, "trying upload", (String)length);
+      hexdump(payload, length);
+    }
     break;
   }
 }

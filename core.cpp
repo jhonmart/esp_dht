@@ -48,18 +48,13 @@ String getValue(String data, char separator, int index) {
     return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-String getValue(String data, char separator, int index);
 String wifiStringState(int code);
 
 System::System(int pin) {
   dht.setup(pin, DHTesp::DHT22);
 }
-
-
-void System::pushDHTDate(float temp, float humi){
-  insertDHTLog(temp, humi);
-};
-DTH_Struct System::showDHTValue() {
+String System::showDHTValue() {
+  String json = "{\"temperature\":";
   float humidity = dht.getHumidity();
   float temperature = dht.getTemperature();
   if(isnan(temperature) || isnan(humidity)) {
@@ -67,8 +62,16 @@ DTH_Struct System::showDHTValue() {
     return showDHTValue();
   }
   float heatIndex = dht.computeHeatIndex(temperature, humidity, false);
+
+  json += temperature;
+  json += ", \"humidity\":";
+  json += humidity;
+  json += ", \"heat_index\":";
+  json += heatIndex;
+  json += "}";
+
   insertDHTLog(temperature, humidity);
-  return { temperature, temperature, heatIndex };
+  return json;
 };
 String System::showDHTHistory(int start, int qtd){
   return showDHTDate(start, qtd);
@@ -78,9 +81,6 @@ String System::showInfo(){
 };
 String System::showLogConfig(){
   return readFile("config");
-};
-void System::writeFile(String path, String text){
-  writeFile(path, text);
 };
 SYS_Status_Struct System::status_chip(){
   uint32_t realSize = ESP.getFlashChipRealSize();
@@ -123,6 +123,10 @@ String System::list_wifi(bool write_data){
 };
 void System::startConfig(){
   String config_raw = readFile("config");
+  String ConnectStatus = "";
+
+  createDir("wifi");
+  createDir("ws");
 
   if (config_raw != "fail") {
     String wifi_sta_ssid = getValue(config_raw,'\n', 0);
@@ -132,15 +136,22 @@ void System::startConfig(){
     int wifi_type_connect = getValue(config_raw,'\n', 4).toInt();
     int cpu_freq = getValue(config_raw,'\n', 5).toInt();
 
+    ConnectStatus = "{\"TryingConnectWith\":\"";
     if(wifi_type_connect == 1) {
-      // log connection
       WiFi.begin(wifi_sta_ssid, wifi_sta_psw);
     } else {
       WiFi.softAP(wifi_ap_ssid, wifi_ap_psw);
     }
-//    WiFi.localIP() // log this
+    
+    ConnectStatus += wifi_type_connect == 1 ? "State Mode\"}" : "AP Mode\"}";
+    writeFile("wifi/log", ConnectStatus);
+    
+    ConnectStatus = "{\"IP\":\"";
+    ConnectStatus += WiFi.localIP() ? WiFi.localIP().toString() : "<<No Connect>>";
+    ConnectStatus += "\"}";
+    writeFile("wifi/log", ConnectStatus);
   } else {
-    // You have a problem!
+    writeFile("SYSTEN_LOG", "{\"fail\":\"OnReadFile\"}");
   }
 };
 String System::readFile(String path){
@@ -149,3 +160,13 @@ String System::readFile(String path){
 String System::showDir(){
   return readRoot();
 };
+void System::logWS(int client, String status, String info) {
+  String json = "{\"client\":";
+  json += client;
+  json += "\",\"status\":";
+  json += status;
+  json += "\",\"data\":";
+  json += info;
+  json += "\"}";
+  writeFile("ws/log", json);
+}
