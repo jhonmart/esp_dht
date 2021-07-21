@@ -2,7 +2,7 @@
 #include "core.h"
 
 System sys;
-
+String lastData = "";
 int SOCKET_PORT  = 8080;
 
 WebSocketsServer _socket = WebSocketsServer(SOCKET_PORT);
@@ -39,6 +39,9 @@ void socketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
     } else if (memcmp(payload, "card_info", 9) == 0) { 
       String json = sys.showInfo();
       _socket.sendTXT(num, json);
+    } else if (memcmp(payload, "chip_info", 9) == 0) { 
+      String json = sys.status_chip();
+      _socket.sendTXT(num, json);
     } else if (memcmp(payload, "conf_info", 9) == 0) { 
       String json = sys.showLogConfig();
       _socket.sendTXT(num, json);
@@ -69,14 +72,16 @@ void setup() {
   sys.startConfig();
   ESP.wdtDisable(); // Desabilita o SW WDT. 
   ESP.wdtEnable(5000); 
-
-  sys.status_chip();
-
   _socket.begin();
   _socket.onEvent(socketEvent);
 }
 
 void loop() {
   _socket.loop();
+  String json = sys.showDHTValue();
+  if (lastData != json) {
+    lastData = json;
+    _socket.broadcastTXT(json);
+  }
   ESP.wdtFeed(); // Alimenta o Watchdog.
 }

@@ -74,19 +74,37 @@ String System::showDHTValue() {
 String System::showLogConfig(){
   return readFile("config");
 };
-SYS_Status_Struct System::status_chip(){
-  uint32_t realSize = ESP.getFlashChipRealSize();
-  uint32_t ideSize = ESP.getFlashChipSize();
+String System::status_chip(){
+  uint32_t realSize = ESP.getFlashChipRealSize() / 1e6;
+  uint32_t ideSize = ESP.getFlashChipSize() / 1e6;
   FlashMode_t ideMode = ESP.getFlashChipMode();
-  uint32_t chipId = ESP.getFlashChipSpeed();
-  uint32_t chipSpeed = ESP.getCpuFreqMHz();
-  String ideModeName = "";
+  uint32_t chipSpeed = ESP.getFlashChipSpeed() / 1e4;
+  uint32_t cpuSpeed = ESP.getCpuFreqMHz();
   String configStatus = ideSize == realSize ? "ok" : "wrong";
   uint32_t sketchSize = ESP.getSketchSize();
   uint32_t sketchSizeFree = ESP.getFreeSketchSpace();
   String heapFragmentation = (String)ESP.getHeapFragmentation();
   
-  SYS_Status_Struct out = { realSize, ideSize, ideMode, chipId, chipSpeed, ideModeName, configStatus, sketchSize, sketchSizeFree, heapFragmentation };
+  String out = "{\"realSize\":\"";
+  out += realSize;
+  out += "MB\",\"ideSize\":\"";
+  out += ideSize;
+  out += "MB\",\"ideMode\":";
+  out += (String)ideMode;
+  out += ",\"chipSpeed\":\"";
+  out += chipSpeed;
+  out += "Mhz\",\"cpuSpeed\":\"";
+  out += cpuSpeed;
+  out += "Mhz\",\"configStatus\":\"";
+  out += configStatus;
+  out += "\",\"sketchSize\":";
+  out += sketchSize;
+  out += ",\"sketchSizeFree\":";
+  out += sketchSizeFree;
+  out += ",\"heapFragmentation\":\"";
+  out += heapFragmentation;
+  out += "\"}";
+
   return out;
 };
 String System::list_wifi(){
@@ -96,18 +114,16 @@ String System::list_wifi(){
 
   while (networkItem++ < count_wifi) {
     json += "{\"name\":\"";
-    json += WiFi.SSID(networkItem);
+    json += WiFi.isHidden(networkItem) ? "<<Hidden>>" : WiFi.SSID(networkItem);
     json += "\",\"encrypt\":\"";
     json += encryptionType(WiFi.encryptionType(networkItem));
-    json += "\",\"rssi\":";
+    json += "\",\"rssi\":\"";
     json += WiFi.RSSI(networkItem);
-    json += "dBm\",\"mac\":";
+    json += "dBm\",\"mac\":\"";
     json += WiFi.BSSIDstr(networkItem);
     json += "\",\"chanel\":";
     json += WiFi.channel(networkItem);
-    json += "\",\"visibility\":";
-    json += WiFi.isHidden(networkItem) ? "<<Hidden>>" : "visible";
-    json += networkItem == count_wifi ? "\"}" : "\"},";
+    json += networkItem == count_wifi ? "}" : "},";
   }
 
   json += "]";
@@ -136,9 +152,10 @@ void System::startConfig(){
       WiFi.softAP(wifi_ap_ssid, wifi_ap_psw);
     }
     
-    ConnectStatus += wifi_type_connect == 1 ? "State Mode\"}" : "AP Mode\"}";
+    ConnectStatus += wifi_type_connect == 1 ? "State Mode\"}," : "AP Mode\"},";
     writeFile("wifi/log", ConnectStatus);
     
+    delay(500);
     ConnectStatus = "{\"IP\":\"";
     ConnectStatus += WiFi.localIP() ? WiFi.localIP().toString() : "<<No Connect>>";
     ConnectStatus += "\"}";
@@ -153,10 +170,10 @@ String System::showDir(){
 void System::logWS(int client, String status, String info) {
   String json = "{\"client\":";
   json += client;
-  json += "\",\"status\":";
+  json += ",\"status\":\"";
   json += status;
-  json += "\",\"data\":";
+  json += "\",\"data\":\"";
   json += info;
-  json += "\"}";
+  json += "\"},";
   writeFile("ws/log", json);
 }

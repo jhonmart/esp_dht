@@ -16,7 +16,7 @@ String printDirectory(File dir, int numTabs) {
     data += ",\"detail\":";
     if (entry.isDirectory()) {
       data += printDirectory(entry, numTabs + 1);
-      data += "}";
+      data += "},";
     } else {
       data += "{";
       data += "\"size\":";
