@@ -4,7 +4,10 @@
 
 #include "DHTesp.h"
 DHTesp dht;
+WebSocketsClient webSocket;
 
+String json_db = "";
+String last_status = "";
 
 String encryptionType(int type) {
   switch (type) {
@@ -48,8 +51,46 @@ String getValue(String data, char separator, int index) {
     return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
+
+void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
+  System sys;
+  switch(type) {
+    case WStype_DISCONNECTED: 
+      sys.logWS(255, "Server", "[WSc] Disconnected!\n");
+      break;
+    case WStype_CONNECTED: {
+      sys.logWS(255, "Server", String((char *)payload));
+      webSocket.sendTXT("Connected");
+      last_status = "Connected";
+    }
+      break;
+    case WStype_TEXT:
+      sys.logWS(255, "Server", String((char *)payload));
+      break;
+    case WStype_BIN:
+      sys.logWS(255, "Server",  (String)length);
+      hexdump(payload, length);
+      break;
+        case WStype_PING:
+            // pong will be send automatically
+            sys.logWS(255, "Server", "[WSc] get ping\n");
+            break;
+        case WStype_PONG:
+            // answer to a ping we send
+            sys.logWS(255, "Server", "[WSc] get pong\n");
+            break;
+    }
+
+}
+
 System::System(int pin) {
   dht.setup(pin, DHTesp::DHT22);
+}
+void System::firebaseSetTemp(String json_data) {
+  if(json_db != json_data) {
+    webSocket.sendTXT(json_data);
+    json_db = json_data;
+  }
 }
 String System::showDHTValue() {
   String json = "{\"temperature\":";
@@ -67,6 +108,7 @@ String System::showDHTValue() {
   json += ", \"heat_index\":";
   json += heatIndex;
   json += "}";
+  firebaseSetTemp(json);
 
   insertDHTLog(temperature, humidity);
   return json;
@@ -144,6 +186,11 @@ void System::startConfig(){
     String wifi_ap_psw = getValue(config_raw,'\n', 3);
     int wifi_type_connect = getValue(config_raw,'\n', 4).toInt();
     int cpu_freq = getValue(config_raw,'\n', 5).toInt();
+    String ws_server_ip = getValue(config_raw,'\n', 6);
+    String ws_server_path = getValue(config_raw,'\n', 7);
+    int ws_server_port = getValue(config_raw,'\n', 8).toInt();
+    int ws_reconect_time = getValue(config_raw,'\n', 9).toInt();
+    int ws_reconect_pong = getValue(config_raw,'\n', 10).toInt();
 
     ConnectStatus = "{\"TryingConnectWith\":\"";
     if(wifi_type_connect == 1) {
@@ -155,11 +202,34 @@ void System::startConfig(){
     ConnectStatus += wifi_type_connect == 1 ? "State Mode\"}," : "AP Mode\"},";
     writeFile("wifi/log", ConnectStatus);
     
-    delay(500);
+    int count = 10;
+    while(WiFi.status() != WL_CONNECTED && count--) {
+      delay(100);
+    }
     ConnectStatus = "{\"IP\":\"";
     ConnectStatus += WiFi.localIP() ? WiFi.localIP().toString() : "<<No Connect>>";
     ConnectStatus += "\"}";
     writeFile("wifi/log", ConnectStatus);
+    webSocket.begin(ws_server_ip, ws_server_port, ws_server_path);
+    webSocket.onEvent(webSocketEvent);
+    webSocket.setAuthorization("user", "Password");
+    webSocket.setReconnectInterval(ws_reconect_time);
+    webSocket.enableHeartbeat(15000, 3000, ws_reconect_pong);
+    delay(100);
+    String json = "{\"server\":\"";
+    json += ws_server_ip;
+    json += "\",\"port\":";
+    json += ws_server_port;
+    json += ",\"reconnect_time\":";
+    json += ws_reconect_time;
+    json += ",\"pong\":";
+    json += ws_reconect_pong;
+    json += ",\"status\":\"";
+    json += last_status == "Connected" ? "ok" : "fail";
+    json += "\"},";
+    writeFile("ws/log", json);
+    
+    firebaseSetTemp(json);
   } else {
     writeFile("SYSTEN_LOG", "{\"fail\":\"OnReadFile\"}");
   }

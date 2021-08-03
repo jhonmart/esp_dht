@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <WebSocketsClient.h>
 #include "data_base.h"
 #define PIN_DHT D2
 
@@ -15,5 +16,6 @@ class System:public DataBaseSD {
     String showDHTValue();
     String showDir();
     void logWS(int client, String status, String info);
+    void firebaseSetTemp(String json_data);
     void startConfig();
 };
