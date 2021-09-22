@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include <WebSocketsClient.h>
 #include "data_base.h"
+#define PIN_IRR D1
 #define PIN_DHT D2
-
+#define PIN_LDR A0
 
 String getValue(String data, char separator, int index);
 
